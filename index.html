@@ -37,14 +37,16 @@
             <div class="column">
                 <h2>⏳ The Cooldown Chamber</h2>
                 
-                <div class="media-card">
-                    <div class="card-header">
-                        <span class="media-title">Squid Game Season 2</span>
-                        <span class="badge badge-tv">TV Show</span>
-                    </div>
-                    <div class="text-muted" style="font-size: 0.85rem;">Remaining: 4 days, 12 hours</div>
-                    <div class="countdown-bar">
-                        <div class="progress-fill" style="width: 42%;"></div>
+                <div id="locked-list">
+                    <div class="media-card">
+                        <div class="card-header">
+                            <span class="media-title">Squid Game Season 2</span>
+                            <span class="badge badge-tv">TV Show</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 0.85rem;">Remaining: 4 days, 12 hours</div>
+                        <div class="countdown-bar">
+                            <div class="progress-fill" style="width: 42%;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -52,22 +54,26 @@
             <div class="column">
                 <h2>⚡ The Decision Desk</h2>
                 
-                <div class="media-card">
-                    <div class="card-header">
-                        <span class="media-title">Elden Ring DLC</span>
-                        <span class="badge badge-game">Video Game</span>
-                    </div>
-                    <div class="text-muted" style="font-size: 0.85rem; color: var(--accent-green);">✓ Unlocked (Cooldown complete)</div>
-                    
-                    <div class="card-actions">
-                        <button class="btn-action btn-consume">Consume</button>
-                        <button class="btn-action btn-trash">Drop Hype</button>
+                <div id="unlocked-list">
+                    <div class="media-card">
+                        <div class="card-header">
+                            <span class="media-title">Elden Ring DLC</span>
+                            <span class="badge badge-game">Video Game</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 0.85rem; color: var(--accent-green);">✓ Unlocked (Cooldown complete)</div>
+                        
+                        <div class="card-actions">
+                            <button class="btn-action btn-consume">Consume</button>
+                            <button class="btn-action btn-trash">Drop Hype</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
         </div>
     </div>
+    
+    <script src="script.js"></script>
 
 </body>
 </html>
