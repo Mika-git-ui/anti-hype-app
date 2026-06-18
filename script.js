@@ -6,11 +6,12 @@ const lockedList = document.getElementById('locked-list');
 const unlockedList = document.getElementById('unlocked-list'); 
 
 // --- Function to draw a card on the screen ---
-// --- Function to draw a card on the screen ---
-function renderCard(id, title, type, priority) {
+function renderCard(id, title, type, priority, createdAt) {
     const newCard = document.createElement('div');
     newCard.className = 'media-card';
     newCard.setAttribute('data-id', id);
+    // 🕒 Crucial: Store the timestamp directly on the element layout
+    newCard.setAttribute('data-created-at', createdAt); 
 
     let typeBadgeHtml = `<span class="badge badge-tv">📺 TV Show</span>`;
     if (type === 'game') typeBadgeHtml = `<span class="badge badge-game">🎮 Video Game</span>`;
@@ -24,13 +25,12 @@ function renderCard(id, title, type, priority) {
             <span class="media-title" style="${titleStyle}">${title}</span>
             ${typeBadgeHtml}
         </div>
-        <div class="text-muted status-text" style="font-size: 0.85rem;">Remaining: 3 seconds</div>
+        <div class="text-muted status-text" style="font-size: 0.85rem;">Calculating remaining time...</div>
         <div class="countdown-bar">
             <div class="progress-fill" style="width: 0%;"></div>
         </div>
     `;
 
-    // Diagnostic Check: Verify if the container actually exists
     if (lockedList) {
         lockedList.appendChild(newCard);
     } else {
@@ -56,8 +56,8 @@ addBtn.addEventListener('click', () => {
     })
     .then(response => response.json())
     .then(savedItem => {
-        // Pass the new backend-generated ID into the card UI
-        renderCard(savedItem.id, savedItem.title, savedItem.type, savedItem.priority);
+        // Pass the backend-generated timestamp into the UI
+        renderCard(savedItem.id, savedItem.title, savedItem.type, savedItem.priority, savedItem.createdAt);
     })
     .catch(error => console.error("Error saving:", error));
 
@@ -68,7 +68,6 @@ addBtn.addEventListener('click', () => {
 function deleteCardFromServer(cardElement, alertMessage) {
     const itemId = cardElement.getAttribute('data-id');
 
-    // Shoot a DELETE request over the wire
     fetch(`http://localhost:3000/api/media/${itemId}`, {
         method: 'DELETE'
     })
@@ -93,7 +92,7 @@ if (unlockedList) {
         if (!card) return;
 
         if (event.target.classList.contains('btn-consume') || event.target.innerText.includes('Consume')) {
-            deleteCardFromServer(card, "Enjoy watching/playing! Hope it lives up to the expectations! 🎉");
+            deleteCardFromServer(card, "Enjoy watching/playing! Hope it lives up to expectations! 🎉");
         }
 
         if (event.target.classList.contains('btn-trash') || event.target.innerText.includes('Drop Hype')) {
@@ -108,7 +107,8 @@ function loadInitialMedia() {
         .then(response => response.json())
         .then(itemsList => {
             itemsList.forEach(item => {
-                renderCard(item.id, item.title, item.type, item.priority);
+                // Read stored creation timestamp or fallback gracefully
+                renderCard(item.id, item.title, item.type, item.priority, item.createdAt || Date.now());
             });
         })
         .catch(err => console.log("Backend offline, skipping initial load."));
@@ -117,35 +117,38 @@ function loadInitialMedia() {
 loadInitialMedia();
 
 
-// --- LIVE TICK ENGINE (FAST 3-SECOND COOLDOWN FOR TESTING) ---
-// --- DIAGNOSTIC LIVE TICK ENGINE ---
+// --- ⏳ PRODUCTION 2-DAY COOLDOWN TICK ENGINE ---
 setInterval(() => {
     const cards = document.querySelectorAll('.media-card');
     
+    // 2 Days in milliseconds: (2 * 24 * 60 * 60 * 1000)
+    const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; 
+
     cards.forEach(card => {
         if (card.closest('#unlocked-list')) return;
 
-        if (!card.totalTimeElapsed) {
-            card.totalTimeElapsed = 0;
-            card.maxDuration = 3; 
-        }
+        const createdAt = parseInt(card.getAttribute('data-created-at'));
+        // If an item doesn't have a valid timestamp yet, skip it for one tick
+        if (!createdAt) return; 
 
-        card.totalTimeElapsed++;
-
-        const remainingTime = card.maxDuration - card.totalTimeElapsed;
-        const progressPercentage = (card.totalTimeElapsed / card.maxDuration) * 100;
+        const now = Date.now();
+        const timeElapsed = now - createdAt;
+        const timeLeft = TWO_DAYS_MS - timeElapsed;
 
         const statusText = card.querySelector('.status-text');
         const progressFill = card.querySelector('.progress-fill');
 
-        // Safety Check: If HTML elements inside the card are missing, log it!
-        if (!statusText || !progressFill) {
-            console.error("ERROR: Missing '.status-text' or '.progress-fill' classes inside your card HTML structure!");
-            return;
-        }
+        if (!statusText || !progressFill) return;
 
-        if (remainingTime > 0) {
-            statusText.innerText = `Remaining: ${remainingTime} seconds`;
+        if (timeLeft > 0) {
+            const totalSecondsLeft = Math.floor(timeLeft / 1000);
+            const hours = Math.floor(totalSecondsLeft / 3600);
+            const minutes = Math.floor((totalSecondsLeft % 3600) / 60);
+            const seconds = totalSecondsLeft % 60;
+
+            statusText.innerText = `Remaining: ${hours}h ${minutes}m ${seconds}s`;
+            
+            const progressPercentage = (timeElapsed / TWO_DAYS_MS) * 100;
             progressFill.style.width = `${progressPercentage}%`;
         } else {
             statusText.innerText = `🔓 Unlocked! Ready to decide.`;
@@ -153,13 +156,7 @@ setInterval(() => {
             progressFill.style.width = '100%';
             progressFill.style.backgroundColor = '#22c55e';
 
-            // Safety Check: If the destination list doesn't exist, log it!
-            if (!unlockedList) {
-                console.error("ERROR: Could not find an HTML element with id='unlocked-list' to move the card into!");
-                return;
-            }
-
-            if (!card.alreadyMoved) {
+            if (unlockedList && !card.alreadyMoved) {
                 card.alreadyMoved = true;
                 
                 const actionsContainer = document.createElement('div');
@@ -171,15 +168,9 @@ setInterval(() => {
                     <button class="btn-trash" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Drop Hype</button>
                 `;
                 card.appendChild(actionsContainer);
-                
                 unlockedList.appendChild(card);
                 console.log("Card successfully moved to Decision Desk!");
             }
         }
     });
-}, 1000);
-
-// --- EMERGENCY TIMER TEST ---
-setInterval(() => {
-    console.log("⏰ SYSTEM CHECK: The loop is ticking live every second!");
 }, 1000);
